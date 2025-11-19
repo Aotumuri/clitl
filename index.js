@@ -16,10 +16,16 @@ function main(argv) {
     process.exit(1);
   }
 
+  if (category === 'help') {
+    const topic = rest[0];
+    printHelp(topic);
+    return;
+  }
+
   if (category === 'gradient') {
     const [effect, ...textParts] = rest;
     if (!effect) {
-      printHelp();
+      printHelp('gradient');
       process.exit(1);
     }
     const text = textParts.length > 0 ? textParts.join(' ') : 'Hello World!';
@@ -29,7 +35,7 @@ function main(argv) {
       stop = startGradient(effect, text, speed);
     } catch (error) {
       console.error(error.message);
-      printHelp();
+      printHelp('gradient');
       process.exit(1);
       return;
     }
@@ -55,19 +61,50 @@ function createCleanup(stop) {
   };
 }
 
-function printHelp() {
-  console.log(
-    [
-      'Usage:',
-      '  clitl gradient <rainbow|darkrainbow> [text] [--speed <ms>]',
-      '  clitl example [text]',
+function printHelp(topic) {
+  const base = [];
+
+  if (!topic) {
+    base.push(
       '',
-      'Examples:',
-      '  clitl gradient rainbow "Hello World" --speed 50',
-      '  clitl gradient darkrainbow "Night Mode"',
-      '  clitl example "Side by side demo"',
-    ].join('\n')
-  );
+      'Commands:',
+      '  clitl gradient <effect> [text] [--speed <ms>]',
+      '  clitl <command> [options]',
+      '  clitl help [command]',
+    );
+  } else if (topic === 'gradient') {
+    base.push(
+      '',
+      'Gradient command:',
+      '  clitl gradient <effect> [text] [--speed <ms>]',
+      `  Available effects: ${Object.keys(gradients).join(', ')}`,
+      '',
+      'Options:',
+      '  --speed, -s    Delay between frames in milliseconds (default: 80)'
+    );
+  } else if (topic === 'example') {
+    base.push(
+      '',
+      'Example command:',
+      '  clitl example [text]',
+      '  Renders rainbow and darkrainbow animations side by side.'
+    );
+  } else if (topic === 'help') {
+    base.push(
+      '',
+      'Help command:',
+      '  clitl help [command]',
+      '  Shows general or command-specific instructions.'
+    );
+  } else {
+    base.push(
+      '',
+      `Unknown help topic "${topic}".`,
+      'Available topics: gradient, example, help.'
+    );
+  }
+
+  console.log(base.join('\n'));
 }
 
 function parseArgs(args) {
