@@ -54,3 +54,46 @@ test('runExample returns stop function', async () => {
     }, 100);
   });
 });
+
+test('multiple gradients and example run concurrently without interference', async () => {
+  await new Promise((resolve, reject) => {
+    const states = {
+      rainbow: 0,
+      dark: 0,
+      example: 0,
+    };
+
+    const stopRainbow = startGradient('rainbow', 'A', 5, {
+      onFrame() {
+        states.rainbow += 1;
+        checkDone();
+      },
+    });
+
+    const stopDark = startGradient('darkrainbow', 'B', 5, {
+      onFrame() {
+        states.dark += 1;
+        checkDone();
+      },
+    });
+
+    const stopExample = runExample('Concurrent');
+
+    function checkDone() {
+      if (states.rainbow >= 2 && states.dark >= 2 && states.example === 0) {
+        states.example = 1;
+        stopRainbow();
+        stopDark();
+        stopExample();
+        resolve();
+      }
+    }
+
+    setTimeout(() => {
+      stopRainbow();
+      stopDark();
+      stopExample();
+      reject(new Error('Concurrent gradient test timed out'));
+    }, 200);
+  });
+});
