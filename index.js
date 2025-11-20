@@ -1,12 +1,8 @@
 #!/usr/bin/env node
 
-// Enable update notifications
-import updateNotifier from 'update-notifier';
-import pkg from './package.json' assert { type: 'json' };
-updateNotifier({ pkg }).notify();
-
 const { startGradient, gradients } = require('./lib');
 const runExample = require('./example');
+const pkg = require('./package.json');
 
 if (require.main === module) {
   main(process.argv.slice(2));
@@ -27,7 +23,14 @@ function main(argv) {
     return;
   }
 
-  if (category === 'gradient') {
+  if (category === 'version') {
+    if (options.checkUpdates) {
+      checkForUpdates();
+    } else {
+      printVersion();
+    }
+    return;
+  } else if (category === 'gradient') {
     const [effect, ...textParts] = rest;
     if (!effect) {
       printHelp('gradient');
@@ -68,15 +71,21 @@ function createCleanup(stop) {
 }
 
 function printHelp(topic) {
-  const base = [];
+  const base = [
+    'Usage:',
+    '  clitl gradient <effect> [text] [--speed <ms>] [--direction <left|right>]',
+    '  clitl example [text]',
+    '  clitl version [--check-updates]',
+    '  clitl help [command]',
+  ];
 
   if (!topic) {
     base.push(
       '',
-      'Commands:',
-      '  clitl gradient <effect> [text] [--speed <ms>] [--direction <left|right>]',
-      '  clitl <command> [options]',
-      '  clitl help [command]',
+      'Examples:',
+      '  clitl gradient rainbow "Hello" --speed 50',
+      '  clitl example "Side by side demo"',
+      '  clitl version --check-updates'
     );
   } else if (topic === 'gradient') {
     base.push(
@@ -96,6 +105,13 @@ function printHelp(topic) {
       '  clitl example [text]',
       '  Renders rainbow, darkrainbow, sunset, loading, and glitch animations together.'
     );
+  } else if (topic === 'version') {
+    base.push(
+      '',
+      'Version command:',
+      '  clitl version [--check-updates]',
+      '  Prints the current version or checks npm for updates.'
+    );
   } else if (topic === 'help') {
     base.push(
       '',
@@ -107,7 +123,7 @@ function printHelp(topic) {
     base.push(
       '',
       `Unknown help topic "${topic}".`,
-      'Available topics: gradient, example, help.'
+      'Available topics: gradient, example, version, help.'
     );
   }
 
@@ -116,7 +132,7 @@ function printHelp(topic) {
 
 function parseArgs(args) {
   const positional = [];
-  const options = { speed: 80, direction: 'left' };
+  const options = { speed: 80, direction: 'left', checkUpdates: false };
 
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
@@ -140,6 +156,8 @@ function parseArgs(args) {
       i += 1;
     } else if (arg.startsWith('--direction=')) {
       options.direction = arg.split('=')[1];
+    } else if (arg === '--check-updates') {
+      options.checkUpdates = true;
     } else {
       positional.push(arg);
     }
@@ -164,6 +182,28 @@ function getDirection(raw) {
     process.exit(1);
   }
   return normalized;
+}
+
+function printVersion() {
+  console.log(pkg.version);
+}
+
+async function checkForUpdates() {
+  let notifier;
+  try {
+    const mod = await import('update-notifier');
+    const factory = mod.default || mod;
+    notifier = factory({ pkg, shouldNotifyInNpmScript: true });
+  } catch (error) {
+    console.error('Unable to load update-notifier:', error.message);
+    process.exit(1);
+  }
+
+  if (notifier.update) {
+    notifier.notify({ isGlobal: true });
+  } else {
+    console.log(`You are using the latest version (${pkg.version}).`);
+  }
 }
 
 module.exports = {
